@@ -2,39 +2,140 @@ import pygame, sys
 import struct, random, wave 
 from pygame.locals import *
 
-def write_sample(samples,num_samples):
-    amplitude=16000//200
-    file='what.wav'
-    sampleing_rate=24000.0
-    nframes=num_samples
-    comptype='NONE'
-    compname='not compressed'
-    nchannels=1
-    sampwidth=2
-
-    wav_file=wave.open(file, 'w')
-
-    wav_file.setparams((nchannels, sampwidth, int(sampleing_rate), nframes, comptype, compname))
 
 
-    i=-1
-    for s in samples:
-        i = -i
-        wav_file.writeframes(struct.pack('h', int(i*s*amplitude)))
+
+class transform:
+#a,b
+#c,d
+    def __init__(self,matrix):
+        self.a = matrix[0][0]
+        self.b = matrix[0][1]
+        self.c = matrix[1][0]
+        self.d = matrix[1][1]
+        return
+
+    def apply(self,pos):
+        x = self.a * pos[0] + self.b * pos[1]
+        y = self.c * pos[0] + self.d * pos[1]
+        return (int(x),int(y))
+
+class samples:
+    """ All PCM and associated data. """
+    def __init__(self,samples,startpos,pixpitch):
+        self.samples = samples
+        #TODO: this goes into something that owns the drawstuff for samples
+        self.pixpitch = pixpitch
+        self.spos = startpos
+        self.screen2samples = transform([[1/pixpitch, 0],[0,1]])
+
+        self.samples2screen = transform([[pixpitch, 0],[0,1]])
+        return
+
+    def __iter__(self):
+        for s in self.samples:
+            yield s
+
+    def write(self):
+        amplitude=16000//200
+        file='what.wav'
+        sampleing_rate=24000.0
+        nframes=len(self.samples)
+        comptype='NONE'
+        compname='not compressed'
+        nchannels=1
+        sampwidth=2
     
-    wav_file.close()
+        wav_file=wave.open(file, 'w')
+
+        wav_file.setparams((nchannels, sampwidth, int(sampleing_rate), nframes, comptype, compname))
+
+        i=1
+        for s in self.samples:
+            wav_file.writeframes(struct.pack('h', int(i*s*amplitude)))
+            i = -i
+
+        wav_file.close()
+        return
+
+    def draw(self):
+        i = 0
+        for e in self.samples:
+            pygame.draw.polygon(windowSurface,
+                    green,
+                    ((i*self.pixpitch, 0), (i*self.pixpitch, e)),
+                    1
+                    )
+            i = i + 1
+        return
 
 
-def draw_sample(pix_div,sample):
-    i = 0
-    for e in sample:
+class pcmMouse:
+    """ Functions for modifying Samples, using the mouse. """
+    def __init__(self):
+        self.position = pygame.mouse.get_pos()
+        self.lastPosition = self.position
+        return
 
-        pygame.draw.polygon(windowSurface,
-                green,
-                ((i*pix_div, 0), (i*pix_div, e)),
-                1
-                )
-        i = i + 1
+    def pencil(self,samp):
+
+        self.lastPosition = self.position
+        self.position = pygame.mouse.get_pos()
+
+        # Do all operations in sample's coordinates.
+        pos = samp.screen2samples.apply(self.position)
+        lastpos = samp.screen2samples.apply(self.lastPosition)
+
+        print([pos,lastpos,len(samp.samples)])
+        if(pos[0]+1 >= len(samp.samples)):
+            samp.samples[-1] = pos[1]
+            return
+        elif(pos[0] == 0):
+            samp.samples[0] = pos[1]
+            return
+        if(pos[0] == lastpos[0]):
+            return
+
+        #TODO: fix for loop below to work even if start < end
+        if(lastpos[0] < pos[0]):
+            start = lastpos[0]
+            end = pos[0]
+        else:
+            start = pos[0]
+            end = lastpos[0]
+
+        #form a straight line from lastpos to pos
+        dy = pos[1] - lastpos[1]
+        dx = pos[0] - lastpos[0]
+        #print([pos, lastpos, dy, dx])
+        slope = dy/dx
+        for x in range(start,end):
+            # point slope equation
+            y = slope * x - slope * lastpos[0] + lastpos[1]
+            #print(y)
+            samp.samples[x] = y
+        return
+
+class signal:
+    def __init__(self):
+        self.mouseClick = False
+        self.writeQuit = False
+        self.quit = False
+        return
+
+    def poll(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.quit = True
+            elif event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    self.writeQuit = True
+            elif event.type == MOUSEBUTTONDOWN:
+                self.mouseClick = True
+            elif event.type == MOUSEBUTTONUP:
+                self.mouseClick = False
+        return
+
 
 pygame.init()
 
@@ -50,72 +151,33 @@ red   = (255, 0, 0)
 green = (0, 255, 0)
 blue  = (0, 0, 255)
 
+sampletmp = []
+samplepitch = 5
+for i in range(windowSize[0]//samplepitch):
+    sampletmp.append(random.randint(0,200))
+samp = samples(sampletmp,(0,100),samplepitch)
 
-print(pygame.display.get_surface().get_size())
 
-div = 200
-#use div like 1/windowSize[0]
-# or use antialiasing
-i = 0
-sampleAmplitude = []
-num_samples = windowSize[0]
-
-while(i < num_samples):
-    sampleAmplitude.append(random.randint(0,200))
-    i += 1
-
+mouse = pcmMouse()
+input = signal()
 
 #pygame.display.update()
 pygame.display.flip()
 
-spaceing = 1
-mouseClick = False
-pos = (1,1)
-lastpos = pos
 while True:
     windowSurface.fill(black)
-    if(mouseClick):
-        lastpos = pos
-        pos = pygame.mouse.get_pos()
-        if(pos[0] != lastpos[0]):
-             if(pos[0] >= len(sampleAmplitude)):
-                 sampleAmplitude[-1] = pos[1]
-             elif(pos[0] < 0):
-                 sampleAmplitude[0] = pos[1]
-             else:
-             #form a straight line from lastpos to pos
-                 dy = pos[1] - lastpos[1]
-                 dx = pos[0] - lastpos[0]
-                 print([pos, lastpos, dy, dx])
-                 slope = dy/dx
-                 if(lastpos[0] < pos[0]):
-                     start = lastpos[0]
-                     end = pos[0]
-                 else:
-                     start = pos[0]
-                     end = lastpos[0]
-                 for x in range(start,end):
 
-                     y = slope * x - slope * lastpos[0] + lastpos[1]
-                     print(y)
-                     sampleAmplitude[x//spaceing] = y
+    input.poll()
 
-        
-    draw_sample(spaceing,sampleAmplitude)
-    #pygame.draw.polygon(windowSurface,
-    #                green,
-    #                ((0,0),pos),1)
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            pygame.quit()
-            sys.exit()
-        if event.type == KEYDOWN:
-            if event.key == K_ESCAPE:
-                write_sample(sampleAmplitude,num_samples) 
-                pygame.quit()
-                sys.exit()
-        if event.type == MOUSEBUTTONDOWN:
-            mouseClick = True
-        if event.type == MOUSEBUTTONUP:
-            mouseClick = False
+    if input.quit:
+        pygame.quit()
+        sys.exit()
+    if input.writeQuit:
+        samp.write()
+        pygame.quit()
+        sys.exit()
+    if input.mouseClick:
+        mouse.pencil(samp)
+
+    samp.draw()
     pygame.display.update()
