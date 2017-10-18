@@ -35,12 +35,14 @@ class samples:
     def __iter__(self):
         for s in self.samples:
             yield s
+    def __len__(self):
+        return len(self.samples)
 
     def write(self):
         amplitude=16000//200
         file='what.wav'
         sampleing_rate=24000.0
-        nframes=len(self.samples)
+        nframes=len(self)
         comptype='NONE'
         compname='not compressed'
         nchannels=1
@@ -86,8 +88,8 @@ class pcmMouse:
         pos = samp.screen2samples.apply(self.position)
         lastpos = samp.screen2samples.apply(self.lastPosition)
 
-        print([pos,lastpos,len(samp.samples)])
-        if(pos[0]+1 >= len(samp.samples)):
+        print([pos,lastpos,len(samp)])
+        if(pos[0]+1 >= len(samp)):
             samp.samples[-1] = pos[1]
             return
         elif(pos[0] == 0):
