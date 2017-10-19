@@ -1,40 +1,68 @@
 import pygame, sys
-import struct, random, wave 
+import struct, random, wave
 from pygame.locals import *
 
+class xyremap:
+    """ use an affine matrix to transform points
+    from one cartesian coordinate system to another """
+#   a,b,c
+#   d,e,f
+#   g,h,i
 
-
-
-class transform:
-#a,b
-#c,d
     def __init__(self,matrix):
         self.a = matrix[0][0]
         self.b = matrix[0][1]
-        self.c = matrix[1][0]
-        self.d = matrix[1][1]
+        self.c = matrix[0][2]
+        self.d = matrix[1][0]
+        self.e = matrix[1][1]
+        self.f = matrix[1][2]
+#       self.g = matrix[2][0]
+#       self.h = matrix[2][1]
+#       self.i = matrix[2][2]
         return
 
+    #TODO: Decide if this needs rotation
+    @classmethod
+    def easyInit(self,scalex,scaley,x,y):
+        return self(
+        [[scalex, 0,      x],
+         [0,      scaley, y]])
+
+
     def apply(self,pos):
-        x = self.a * pos[0] + self.b * pos[1]
-        y = self.c * pos[0] + self.d * pos[1]
+        """Matrix multiply using homogeneous coordinates"""
+
+#        _     _   _ _
+#       | a,b,c | | x |
+#       | d,e,f | | y | = ret
+#       |_g,h,i_| |_1_|
+
+        x = self.a * pos[0] + self.b * pos[1] + self.c # * 1
+        y = self.d * pos[0] + self.e * pos[1] + self.f # * 1
+#       1 = self.g * pos[0] + self.h * pos[1] + self.i   * 1
+        return (int(x),int(y))
+
+    #TODO: Write this
+    def applyReverse(self,pos):
+        """Reverse the affine coordinate transformation"""
+        x = 0
+        y = 0
         return (int(x),int(y))
 
 class samples:
     """ All PCM and associated data. """
-    def __init__(self,samples,startpos,pixpitch):
+    def __init__(self,samples,scalx,x,y):
         self.samples = samples
         #TODO: this goes into something that owns the drawstuff for samples
-        self.pixpitch = pixpitch
-        self.spos = startpos
-        self.screen2samples = transform([[1/pixpitch, 0],[0,1]])
 
-        self.samples2screen = transform([[pixpitch, 0],[0,1]])
+        self.screen2samples = xyremap.easyInit(1/scalx, 1,-x/scalx,-y)
+        self.samples2screen = xyremap.easyInit(  scalx, 1, x      , y)
         return
 
     def __iter__(self):
         for s in self.samples:
             yield s
+
     def __len__(self):
         return len(self.samples)
 
@@ -47,7 +75,7 @@ class samples:
         compname='not compressed'
         nchannels=1
         sampwidth=2
-    
+
         wav_file=wave.open(file, 'w')
 
         wav_file.setparams((nchannels, sampwidth, int(sampleing_rate), nframes, comptype, compname))
@@ -63,11 +91,11 @@ class samples:
     def draw(self):
         i = 0
         for e in self.samples:
-            pygame.draw.polygon(windowSurface,
-                    green,
-                    ((i*self.pixpitch, 0), (i*self.pixpitch, e)),
-                    1
-                    )
+            startpos = self.samples2screen.apply((i,0))
+            endpos = self.samples2screen.apply((i,e))
+
+            pygame.draw.polygon(
+            windowSurface, green, (startpos, endpos), 1)
             i = i + 1
         return
 
@@ -154,10 +182,10 @@ green = (0, 255, 0)
 blue  = (0, 0, 255)
 
 sampletmp = []
-samplepitch = 5
+samplescale = 9
 for i in range(windowSize[0]//samplepitch):
     sampletmp.append(random.randint(0,200))
-samp = samples(sampletmp,(0,100),samplepitch)
+samp = samples(sampletmp,samplescale,10,100)
 
 
 mouse = pcmMouse()
