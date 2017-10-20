@@ -1,0 +1,16 @@
+goals:
+
+ + edit .wav file bits
+ + ease audio composition
+
+non-goals:
+
+ + become a DAW
+ + process midi
+
+## Roadmap
+
++ put a slider on the sample.draw function
+  + use a container
+  + use arrow keys for input
+  + draw a dot indicateing how far along the sample is
