@@ -83,7 +83,31 @@ class samples:
         i=1
         for s in self.samples:
             wav_file.writeframes(struct.pack('h', int(i*s*amplitude)))
-            i = -i
+        #    i = -i
+
+        wav_file.close()
+        return
+
+    def read(self):
+        amplitude=16000//200
+        file='what.wav'
+
+        wav_file=wave.open(file, 'r')
+
+        nchannels, sampwidth, framerate, nframes, comptype, compname = wav_file.getparams()
+        self.nchannels = nchannels
+        self.sampwidth = sampwidth
+        self.framerate = framerate
+        self.nframes   = nframes
+        self.comptype  = comptype
+        self.compname  = compname
+        tmp_sample = 0
+
+        tmp_bytes = wav_file.readframes(nframes)
+
+        tmp_iter = struct.iter_unpack('h', tmp_bytes)
+        for s in range(nframes):
+            self.samples.append(next(tmp_iter)[0]//amplitude)
 
         wav_file.close()
         return
@@ -183,9 +207,10 @@ blue  = (0, 0, 255)
 
 sampletmp = []
 samplescale = 9
-for i in range(windowSize[0]//samplepitch):
+for i in range(windowSize[0]//samplescale):
     sampletmp.append(random.randint(0,200))
-samp = samples(sampletmp,samplescale,10,100)
+samp = samples([],samplescale,10,100)
+samp.read()
 
 
 mouse = pcmMouse()
