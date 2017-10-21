@@ -1,4 +1,5 @@
 import pygame, sys
+import numpy as np
 import struct, random, wave
 from pygame.locals import *
 
@@ -10,15 +11,27 @@ class xyremap:
 #   g,h,i
 
     def __init__(self,matrix):
-        self.a = matrix[0][0]
-        self.b = matrix[0][1]
-        self.c = matrix[0][2]
-        self.d = matrix[1][0]
-        self.e = matrix[1][1]
-        self.f = matrix[1][2]
-#       self.g = matrix[2][0]
-#       self.h = matrix[2][1]
-#       self.i = matrix[2][2]
+        forward = matrix
+        forward.append([0,0,1])
+
+        assert np.linalg.det(forward) != 0
+        dt = np.dtype(float)
+        inverse = np.array(np.linalg.inv(forward))
+
+        self.f_a = forward[0][0]
+        self.f_b = forward[0][1]
+        self.f_c = forward[0][2]
+        self.f_d = forward[1][0]
+        self.f_e = forward[1][1]
+        self.f_f = forward[1][2]
+
+        self.i_a = inverse[0][0]
+        self.i_b = inverse[0][1]
+        self.i_c = inverse[0][2]
+        self.i_d = inverse[1][0]
+        self.i_e = inverse[1][1]
+        self.i_f = inverse[1][2]
+
         return
 
     #TODO: Decide if this needs rotation
@@ -37,16 +50,16 @@ class xyremap:
 #       | d,e,f | | y | = ret
 #       |_g,h,i_| |_1_|
 
-        x = self.a * pos[0] + self.b * pos[1] + self.c # * 1
-        y = self.d * pos[0] + self.e * pos[1] + self.f # * 1
-#       1 = self.g * pos[0] + self.h * pos[1] + self.i   * 1
+        x = self.f_a * pos[0] + self.f_b * pos[1] + self.f_c # * 1
+        y = self.f_d * pos[0] + self.f_e * pos[1] + self.f_f # * 1
+#       1 = self.f_g * pos[0] + self.f_h * pos[1] + self.f_i   * 1
         return (int(x),int(y))
 
-    #TODO: Write this
-    def applyReverse(self,pos):
-        """Reverse the affine coordinate transformation"""
-        x = 0
-        y = 0
+    def applyInverse(self,pos):
+        """Reverse the coordinate transformation"""
+        x = self.i_a * pos[0] + self.i_b * pos[1] + self.i_c # * 1
+        y = self.i_d * pos[0] + self.i_e * pos[1] + self.i_f # * 1
+#       1 = self.i_g * pos[0] + self.i_h * pos[1] + self.i_i   * 1
         return (int(x),int(y))
 
 class samples:
