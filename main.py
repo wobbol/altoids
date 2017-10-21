@@ -66,8 +66,7 @@ class samples:
         self.samples = samples
         #TODO: this goes into something that owns the drawstuff for samples
 
-        self.screen2samples = xyremap.easyInit(1/scalx, 1,-x/scalx,-y)
-        self.samples2screen = xyremap.easyInit(  scalx, 1, x      , y)
+        self.to_screen = xyremap.easyInit(  scalx, 1, x      , y)
         return
 
     def __iter__(self):
@@ -126,8 +125,8 @@ class samples:
     def draw(self):
         i = 0
         for e in self.samples:
-            startpos = self.samples2screen.apply((i,0))
-            endpos = self.samples2screen.apply((i,e))
+            startpos = self.to_screen.apply((i,0))
+            endpos = self.to_screen.apply((i,e))
 
             pygame.draw.polygon(
             windowSurface, green, (startpos, endpos), 1)
@@ -148,8 +147,8 @@ class pcmMouse:
         self.position = pygame.mouse.get_pos()
 
         # Do all operations in sample's coordinates.
-        pos = samp.screen2samples.apply(self.position)
-        lastpos = samp.screen2samples.apply(self.lastPosition)
+        pos = samp.to_screen.applyInverse(self.position)
+        lastpos = samp.to_screen.applyInverse(self.lastPosition)
 
         print([pos,lastpos,len(samp)])
         if(pos[0]+1 >= len(samp)):
