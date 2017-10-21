@@ -111,13 +111,12 @@ class samples:
         self.nframes   = nframes
         self.comptype  = comptype
         self.compname  = compname
-        tmp_sample = 0
 
-        tmp_bytes = wav_file.readframes(nframes)
+        pcm_raw = wav_file.readframes(nframes)
 
-        tmp_iter = struct.iter_unpack('h', tmp_bytes)
+        pcm = struct.iter_unpack('h', pcm_raw)
         for s in range(nframes):
-            self.samples.append(next(tmp_iter)[0]//amplitude)
+            self.samples.append(next(pcm)[0]//amplitude)
 
         wav_file.close()
         return
