@@ -34,13 +34,11 @@ class xyremap:
 
         return
 
-    #TODO: Decide if this needs rotation
     @classmethod
     def easyInit(self,scalex,scaley,x,y):
         return self(
         [[scalex, 0,      x],
          [0,      scaley, y]])
-
 
     def apply(self,pos):
         """Matrix multiply using homogeneous coordinates"""
